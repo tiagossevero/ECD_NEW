@@ -564,6 +564,183 @@ def carregar_plano_contas_agregado(_engine, ano=None):
         return None
 
 @st.cache_data(ttl=3600)
+def carregar_indicios_neaf(_engine, cnpj=None, limite=500):
+    """Carrega indícios de NEAF detalhados."""
+    if _engine is None:
+        return None
+
+    cnpj_filter = f"WHERE cnpj = '{cnpj}'" if cnpj else ""
+
+    query = f"""
+    SELECT
+        cnpj,
+        descricao_indicio,
+        complemento_indicio,
+        COUNT(*) as qtd_ocorrencias
+    FROM {DATABASE}.ecd_neaf_indicios
+    {cnpj_filter}
+    GROUP BY cnpj, descricao_indicio, complemento_indicio
+    ORDER BY qtd_ocorrencias DESC
+    LIMIT {limite}
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar indícios NEAF: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
+def carregar_score_neaf(_engine, limite=500):
+    """Carrega scores de risco NEAF."""
+    if _engine is None:
+        return None
+
+    query = f"""
+    SELECT
+        ns.cnpj,
+        ec.nm_razao_social,
+        ec.cnae_divisao_descricao as setor,
+        ec.cd_uf,
+        ns.qtd_total_indicios,
+        ns.qtd_tipos_indicios_distintos,
+        ns.score_risco_neaf,
+        ns.classificacao_risco_neaf
+    FROM {DATABASE}.ecd_neaf_score_risco ns
+    INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
+        ON ns.cnpj = ec.cnpj
+    ORDER BY ns.score_risco_neaf DESC
+    LIMIT {limite}
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar score NEAF: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
+def carregar_inconsistencias_equacao(_engine, ano=None, limite=500):
+    """Carrega inconsistências na equação contábil."""
+    if _engine is None:
+        return None
+
+    ano_filter = f"AND CAST(ie.ano_referencia / 100 AS INT) = {ano}" if ano else ""
+
+    query = f"""
+    SELECT
+        ie.cnpj,
+        ec.nm_razao_social,
+        ec.cnae_divisao_descricao as setor,
+        ec.cd_uf,
+        ie.ano_referencia,
+        ie.data_fim_periodo,
+        ie.ativo_total,
+        ie.passivo_pl_total,
+        ie.diferenca_absoluta,
+        ie.percentual_diferenca,
+        ie.classificacao_inconsistencia,
+        ie.score_risco_equacao
+    FROM {DATABASE}.ecd_inconsistencias_equacao ie
+    INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
+        ON ie.cnpj = ec.cnpj
+        AND CAST(ie.ano_referencia / 100 AS INT) = CAST(ec.ano_referencia / 100 AS INT)
+    WHERE ie.classificacao_inconsistencia != 'OK'
+        {ano_filter}
+    ORDER BY ie.score_risco_equacao DESC, ABS(ie.diferenca_absoluta) DESC
+    LIMIT {limite}
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar inconsistências: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
+def carregar_inconsistencias_variacoes(_engine, ano=None, limite=500):
+    """Carrega variações anômalas de contas."""
+    if _engine is None:
+        return None
+
+    ano_filter = f"AND ano_atual = {ano}" if ano else ""
+
+    query = f"""
+    SELECT
+        iv.cnpj,
+        ec.nm_razao_social,
+        ec.cnae_divisao_descricao as setor,
+        ec.cd_uf,
+        iv.cd_conta,
+        iv.ano_anterior,
+        iv.ano_atual,
+        iv.saldo_ano_anterior,
+        iv.saldo_ano_atual,
+        iv.variacao_absoluta,
+        iv.variacao_percentual,
+        iv.classificacao_variacao,
+        iv.score_risco_variacao
+    FROM {DATABASE}.ecd_inconsistencias_variacoes iv
+    INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
+        ON iv.cnpj = ec.cnpj
+    WHERE iv.classificacao_variacao IN ('CRITICO', 'ALTO', 'SUSPEITO')
+        {ano_filter}
+    ORDER BY iv.score_risco_variacao DESC, ABS(iv.variacao_percentual) DESC
+    LIMIT {limite}
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar variações: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
+def carregar_benchmark_setorial(_engine, ano=None):
+    """Carrega benchmark setorial por CNAE."""
+    if _engine is None:
+        return None
+
+    ano_filter = f"WHERE ano_referencia = {ano}" if ano else ""
+
+    query = f"""
+    SELECT
+        cd_cnae,
+        de_cnae,
+        cnae_divisao,
+        cnae_divisao_descricao,
+        ano_referencia,
+        qtd_empresas_setor,
+        media_ativo_total_setor,
+        media_receita_liquida_setor,
+        media_resultado_liquido_setor,
+        media_liquidez_corrente_setor,
+        media_endividamento_setor,
+        media_margem_liquida_setor,
+        media_roe_setor,
+        percentil_25_ativo,
+        percentil_50_ativo,
+        percentil_75_ativo,
+        percentil_25_receita,
+        percentil_50_receita,
+        percentil_75_receita
+    FROM {DATABASE}.ecd_benchmark_setorial
+    {ano_filter}
+    ORDER BY qtd_empresas_setor DESC
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar benchmark setorial: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
 def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None, threshold_max=None, ano=None):
     """Carrega empresas suspeitas para um indicador específico."""
     if _engine is None:
@@ -1043,7 +1220,10 @@ pagina = st.sidebar.radio(
         "🎯 Fiscalização Inteligente (ML)",
         "⚠️ Empresas Alto Risco",
         "📉 Indicadores Financeiros",
-        "🗂️ Plano de Contas"
+        "🗂️ Plano de Contas",
+        "🔍 Indícios NEAF",
+        "⚖️ Inconsistências Contábeis",
+        "📈 Benchmark Setorial"
     ],
     label_visibility="collapsed"
 )
@@ -2750,6 +2930,614 @@ elif pagina == "🗂️ Plano de Contas":
     else:
         st.error("Não foi possível carregar os dados do plano de contas.")
 
+# ---------------------------------------------------------------------------
+# PÁGINA: INDÍCIOS NEAF
+# ---------------------------------------------------------------------------
+
+elif pagina == "🔍 Indícios NEAF":
+    st.markdown("<h1 class='main-header'>🔍 Análise de Indícios NEAF</h1>", unsafe_allow_html=True)
+
+    st.markdown("""
+    ### Sistema de Análise de Notas Fiscais de Entrada Ausente de Fornecedor
+
+    O NEAF identifica operações onde:
+    - 📄 A empresa declarou compras que o fornecedor não registrou vendas
+    - ⚠️ Potencial simulação de operações ou notas frias
+    - 🔍 Indícios de irregularidades fiscais
+    """)
+
+    st.markdown("---")
+
+    # Carregar dados de score NEAF
+    with st.spinner("Carregando dados de NEAF..."):
+        df_score_neaf = carregar_score_neaf(engine, limite=500)
+
+    if df_score_neaf is not None and not df_score_neaf.empty:
+        # Métricas principais
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            total_empresas = len(df_score_neaf)
+            st.markdown(f"""
+            <div class='metric-card-red'>
+                <h3>{total_empresas:,}</h3>
+                <p>Empresas com Indícios</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            total_indicios = df_score_neaf['qtd_total_indicios'].sum()
+            st.markdown(f"""
+            <div class='metric-card-yellow'>
+                <h3>{total_indicios:,}</h3>
+                <p>Total de Indícios</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            media_score = df_score_neaf['score_risco_neaf'].mean()
+            st.markdown(f"""
+            <div class='metric-card'>
+                <h3>{media_score:.2f}</h3>
+                <p>Score Médio de Risco</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            criticos = (df_score_neaf['classificacao_risco_neaf'] == 'CRÍTICO').sum()
+            st.markdown(f"""
+            <div class='metric-card-red'>
+                <h3>{criticos}</h3>
+                <p>Risco Crítico</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Gráficos
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 📊 Distribuição por Classificação de Risco")
+            class_counts = df_score_neaf['classificacao_risco_neaf'].value_counts()
+            fig = px.pie(
+                values=class_counts.values,
+                names=class_counts.index,
+                color=class_counts.index,
+                color_discrete_map={
+                    'CRÍTICO': '#d32f2f',
+                    'ALTO': '#f57c00',
+                    'MODERADO': '#fbc02d',
+                    'BAIXO': '#689f38'
+                },
+                hole=0.4
+            )
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.markdown("### 🏭 Top 10 Setores com Mais Indícios")
+            setor_indicios = df_score_neaf.groupby('setor')['qtd_total_indicios'].sum().nlargest(10)
+            fig = px.bar(
+                x=setor_indicios.values,
+                y=setor_indicios.index,
+                orientation='h',
+                color=setor_indicios.values,
+                color_continuous_scale='Reds',
+                labels={'x': 'Quantidade de Indícios', 'y': 'Setor'}
+            )
+            fig.update_layout(height=400, showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Scatter plot
+        st.markdown("---")
+        st.markdown("### 🎯 Análise Multidimensional de Risco NEAF")
+
+        fig = px.scatter(
+            df_score_neaf,
+            x='qtd_total_indicios',
+            y='qtd_tipos_indicios_distintos',
+            size='score_risco_neaf',
+            color='classificacao_risco_neaf',
+            hover_data=['nm_razao_social', 'setor', 'cd_uf'],
+            color_discrete_map={
+                'CRÍTICO': '#d32f2f',
+                'ALTO': '#f57c00',
+                'MODERADO': '#fbc02d',
+                'BAIXO': '#689f38'
+            },
+            labels={
+                'qtd_total_indicios': 'Quantidade Total de Indícios',
+                'qtd_tipos_indicios_distintos': 'Tipos Distintos de Indícios',
+                'classificacao_risco_neaf': 'Classificação'
+            }
+        )
+        fig.update_layout(height=500)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Tabela detalhada
+        st.markdown("---")
+        st.markdown("### 📋 Empresas com Indícios NEAF")
+
+        # Filtros
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            classificacoes = ['Todas'] + list(df_score_neaf['classificacao_risco_neaf'].dropna().unique())
+            filtro_class = st.selectbox("Classificação de Risco", classificacoes)
+
+        with col2:
+            ufs_neaf = ['Todas'] + sorted(df_score_neaf['cd_uf'].dropna().unique().tolist())
+            filtro_uf = st.selectbox("UF", ufs_neaf, key='uf_neaf')
+
+        with col3:
+            min_indicios = st.number_input("Mínimo de Indícios", min_value=0, value=1)
+
+        # Aplicar filtros
+        df_filtrado_neaf = df_score_neaf.copy()
+
+        if filtro_class != 'Todas':
+            df_filtrado_neaf = df_filtrado_neaf[df_filtrado_neaf['classificacao_risco_neaf'] == filtro_class]
+
+        if filtro_uf != 'Todas':
+            df_filtrado_neaf = df_filtrado_neaf[df_filtrado_neaf['cd_uf'] == filtro_uf]
+
+        df_filtrado_neaf = df_filtrado_neaf[df_filtrado_neaf['qtd_total_indicios'] >= min_indicios]
+
+        st.info(f"**{len(df_filtrado_neaf)} empresas** encontradas com os filtros aplicados")
+
+        df_exibir = df_filtrado_neaf[[
+            'nm_razao_social', 'cnpj', 'setor', 'cd_uf',
+            'qtd_total_indicios', 'qtd_tipos_indicios_distintos',
+            'score_risco_neaf', 'classificacao_risco_neaf'
+        ]].copy()
+
+        df_exibir.columns = [
+            'Razão Social', 'CNPJ', 'Setor', 'UF',
+            'Total Indícios', 'Tipos Indícios',
+            'Score Risco', 'Classificação'
+        ]
+
+        df_exibir = limpar_dataframe_para_exibicao(df_exibir)
+        st.dataframe(
+            df_exibir.style.format({
+                'Score Risco': '{:.2f}'
+            }).background_gradient(subset=['Score Risco'], cmap='Reds')
+              .background_gradient(subset=['Total Indícios'], cmap='OrRd'),
+            use_container_width=True,
+            height=500
+        )
+
+        # Exportar
+        if st.button("📥 Exportar Lista NEAF (CSV)"):
+            csv = df_filtrado_neaf.to_csv(index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv,
+                file_name=f"neaf_indicios_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+    else:
+        st.warning("Não há dados de NEAF disponíveis ou a tabela ainda não foi populada.")
+
+# ---------------------------------------------------------------------------
+# PÁGINA: INCONSISTÊNCIAS CONTÁBEIS
+# ---------------------------------------------------------------------------
+
+elif pagina == "⚖️ Inconsistências Contábeis":
+    st.markdown("<h1 class='main-header'>⚖️ Análise de Inconsistências Contábeis</h1>", unsafe_allow_html=True)
+
+    st.markdown("""
+    ### Detecção de Anomalias na Equação Patrimonial e Variações de Contas
+
+    Este módulo analisa:
+    - ⚖️ **Equação Contábil**: Ativo ≠ Passivo + Patrimônio Líquido
+    - 📊 **Variações Anômalas**: Mudanças abruptas em contas específicas
+    - 🔍 **Scores de Risco**: Classificação por gravidade da inconsistência
+    """)
+
+    st.markdown("---")
+
+    # Tabs para diferentes análises
+    tab1, tab2 = st.tabs(["⚖️ Equação Patrimonial", "📊 Variações de Contas"])
+
+    with tab1:
+        st.markdown("### Inconsistências na Equação Patrimonial")
+        st.info("**Regra Básica:** Ativo Total = Passivo Total + Patrimônio Líquido")
+
+        with st.spinner("Carregando inconsistências..."):
+            df_equacao = carregar_inconsistencias_equacao(engine, ano=ano_selecionado, limite=500)
+
+        if df_equacao is not None and not df_equacao.empty:
+            # Métricas
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                total_incons = len(df_equacao)
+                st.metric("Empresas com Inconsistência", total_incons)
+
+            with col2:
+                media_perc = df_equacao['percentual_diferenca'].mean()
+                st.metric("Diferença Média (%)", f"{media_perc:.2f}%")
+
+            with col3:
+                criticos = (df_equacao['classificacao_inconsistencia'] == 'Crítica').sum()
+                st.metric("Inconsistências Críticas", criticos)
+
+            with col4:
+                media_score = df_equacao['score_risco_equacao'].mean()
+                st.metric("Score Médio", f"{media_score:.2f}")
+
+            st.markdown("---")
+
+            # Gráficos
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("#### Distribuição por Classificação")
+                class_counts = df_equacao['classificacao_inconsistencia'].value_counts()
+                fig = px.pie(
+                    values=class_counts.values,
+                    names=class_counts.index,
+                    color=class_counts.index,
+                    color_discrete_map={
+                        'Crítica': '#d32f2f',
+                        'Alta': '#f57c00',
+                        'Moderada': '#fbc02d',
+                        'Diferença Mínima': '#689f38'
+                    }
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                st.markdown("#### Top 15 por Diferença Absoluta")
+                df_equacao['diferenca_absoluta'] = pd.to_numeric(df_equacao['diferenca_absoluta'], errors='coerce').fillna(0)
+                df_top = df_equacao.nlargest(15, 'diferenca_absoluta')
+
+                fig = px.bar(
+                    df_top,
+                    x='diferenca_absoluta',
+                    y='nm_razao_social',
+                    orientation='h',
+                    color='score_risco_equacao',
+                    color_continuous_scale='Reds',
+                    labels={'diferenca_absoluta': 'Diferença (R$)', 'nm_razao_social': 'Empresa'}
+                )
+                fig.update_layout(height=500)
+                fig.update_yaxes(tickfont=dict(size=8))
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Tabela
+            st.markdown("---")
+            st.markdown("#### 📋 Detalhamento das Inconsistências")
+
+            df_exibir = df_equacao[[
+                'nm_razao_social', 'cnpj', 'setor', 'cd_uf',
+                'ativo_total', 'passivo_pl_total', 'diferenca_absoluta',
+                'percentual_diferenca', 'classificacao_inconsistencia', 'score_risco_equacao'
+            ]].copy()
+
+            df_exibir.columns = [
+                'Razão Social', 'CNPJ', 'Setor', 'UF',
+                'Ativo Total', 'Passivo + PL', 'Diferença',
+                '% Diferença', 'Classificação', 'Score'
+            ]
+
+            df_exibir = limpar_dataframe_para_exibicao(df_exibir)
+            st.dataframe(
+                df_exibir.style.format({
+                    'Ativo Total': 'R$ {:,.2f}',
+                    'Passivo + PL': 'R$ {:,.2f}',
+                    'Diferença': 'R$ {:,.2f}',
+                    '% Diferença': '{:.2f}%',
+                    'Score': '{:.2f}'
+                }).background_gradient(subset=['Score'], cmap='Reds'),
+                use_container_width=True,
+                height=400
+            )
+        else:
+            st.success("✅ Nenhuma inconsistência significativa na equação patrimonial encontrada!")
+
+    with tab2:
+        st.markdown("### Variações Anômalas de Contas")
+        st.info("**Detecta:** Mudanças de mais de 100% ou reduções acima de 50% entre anos")
+
+        with st.spinner("Carregando variações anômalas..."):
+            df_variacoes = carregar_inconsistencias_variacoes(engine, ano=ano_selecionado, limite=500)
+
+        if df_variacoes is not None and not df_variacoes.empty:
+            # Métricas
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                total_var = len(df_variacoes)
+                st.metric("Variações Detectadas", total_var)
+
+            with col2:
+                empresas_afetadas = df_variacoes['cnpj'].nunique()
+                st.metric("Empresas Afetadas", empresas_afetadas)
+
+            with col3:
+                criticos = (df_variacoes['classificacao_variacao'] == 'CRITICO').sum()
+                st.metric("Variações Críticas", criticos)
+
+            with col4:
+                media_var = df_variacoes['variacao_percentual'].abs().mean()
+                st.metric("Variação Média (%)", f"{media_var:.1f}%")
+
+            st.markdown("---")
+
+            # Gráficos
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("#### Distribuição por Classificação")
+                class_counts = df_variacoes['classificacao_variacao'].value_counts()
+                fig = px.pie(
+                    values=class_counts.values,
+                    names=class_counts.index,
+                    color=class_counts.index,
+                    color_discrete_map={
+                        'CRITICO': '#d32f2f',
+                        'ALTO': '#f57c00',
+                        'SUSPEITO': '#fbc02d'
+                    }
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                st.markdown("#### Distribuição por Setor")
+                setor_counts = df_variacoes['setor'].value_counts().head(10)
+                fig = px.bar(
+                    x=setor_counts.values,
+                    y=setor_counts.index,
+                    orientation='h',
+                    color=setor_counts.values,
+                    color_continuous_scale='OrRd',
+                    labels={'x': 'Quantidade', 'y': 'Setor'}
+                )
+                fig.update_layout(height=350, showlegend=False)
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Tabela
+            st.markdown("---")
+            st.markdown("#### 📋 Detalhamento das Variações Anômalas")
+
+            df_exibir = df_variacoes[[
+                'nm_razao_social', 'cnpj', 'setor', 'cd_conta',
+                'saldo_ano_anterior', 'saldo_ano_atual', 'variacao_absoluta',
+                'variacao_percentual', 'classificacao_variacao', 'score_risco_variacao'
+            ]].copy()
+
+            df_exibir.columns = [
+                'Razão Social', 'CNPJ', 'Setor', 'Conta',
+                'Saldo Anterior', 'Saldo Atual', 'Variação Abs.',
+                'Variação %', 'Classificação', 'Score'
+            ]
+
+            df_exibir = limpar_dataframe_para_exibicao(df_exibir)
+            st.dataframe(
+                df_exibir.style.format({
+                    'Saldo Anterior': 'R$ {:,.2f}',
+                    'Saldo Atual': 'R$ {:,.2f}',
+                    'Variação Abs.': 'R$ {:,.2f}',
+                    'Variação %': '{:.1f}%',
+                    'Score': '{:.2f}'
+                }).background_gradient(subset=['Score'], cmap='Reds'),
+                use_container_width=True,
+                height=400
+            )
+        else:
+            st.success("✅ Nenhuma variação anômala significativa encontrada!")
+
+# ---------------------------------------------------------------------------
+# PÁGINA: BENCHMARK SETORIAL
+# ---------------------------------------------------------------------------
+
+elif pagina == "📈 Benchmark Setorial":
+    st.markdown("<h1 class='main-header'>📈 Benchmark Setorial</h1>", unsafe_allow_html=True)
+
+    st.markdown("""
+    ### Análise Comparativa por Setor Econômico (CNAE)
+
+    Compare indicadores financeiros entre setores:
+    - 📊 **Médias setoriais** de ativo, receita e indicadores
+    - 📈 **Percentis** para identificar outliers
+    - 🏆 **Ranking** de desempenho por setor
+    """)
+
+    st.markdown("---")
+
+    # Carregar benchmark
+    with st.spinner("Carregando benchmark setorial..."):
+        df_benchmark = carregar_benchmark_setorial(engine, ano=ano_selecionado)
+
+    if df_benchmark is not None and not df_benchmark.empty:
+        # Métricas principais
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            total_setores = len(df_benchmark)
+            st.markdown(f"""
+            <div class='metric-card'>
+                <h3>{total_setores}</h3>
+                <p>Setores Analisados</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            total_empresas = df_benchmark['qtd_empresas_setor'].sum()
+            st.markdown(f"""
+            <div class='metric-card-blue'>
+                <h3>{total_empresas:,}</h3>
+                <p>Total de Empresas</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            media_liquidez = df_benchmark['media_liquidez_corrente_setor'].mean()
+            st.markdown(f"""
+            <div class='metric-card-green'>
+                <h3>{media_liquidez:.2f}</h3>
+                <p>Liquidez Média Geral</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            media_margem = df_benchmark['media_margem_liquida_setor'].mean()
+            st.markdown(f"""
+            <div class='metric-card-yellow'>
+                <h3>{media_margem:.2f}%</h3>
+                <p>Margem Média Geral</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Seletor de indicador
+        indicador_bench = st.selectbox(
+            "Selecione o indicador para análise",
+            [
+                'Ativo Total Médio',
+                'Receita Líquida Média',
+                'Liquidez Corrente',
+                'Endividamento',
+                'Margem Líquida',
+                'ROE'
+            ]
+        )
+
+        # Mapear para coluna
+        mapa_bench = {
+            'Ativo Total Médio': 'media_ativo_total_setor',
+            'Receita Líquida Média': 'media_receita_liquida_setor',
+            'Liquidez Corrente': 'media_liquidez_corrente_setor',
+            'Endividamento': 'media_endividamento_setor',
+            'Margem Líquida': 'media_margem_liquida_setor',
+            'ROE': 'media_roe_setor'
+        }
+
+        coluna_bench = mapa_bench[indicador_bench]
+
+        # Gráficos
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"### 🏆 Top 15 Setores - {indicador_bench}")
+            df_benchmark[coluna_bench] = pd.to_numeric(df_benchmark[coluna_bench], errors='coerce').fillna(0)
+            df_top_bench = df_benchmark.nlargest(15, coluna_bench)
+
+            fig = px.bar(
+                df_top_bench,
+                x=coluna_bench,
+                y='cnae_divisao_descricao',
+                orientation='h',
+                color=coluna_bench,
+                color_continuous_scale='Viridis',
+                labels={coluna_bench: indicador_bench, 'cnae_divisao_descricao': 'Setor'}
+            )
+            fig.update_layout(height=600, showlegend=False)
+            fig.update_yaxes(tickfont=dict(size=9))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.markdown("### 🏭 Empresas por Setor (Top 15)")
+            df_benchmark['qtd_empresas_setor'] = pd.to_numeric(df_benchmark['qtd_empresas_setor'], errors='coerce').fillna(0)
+            df_top_emp = df_benchmark.nlargest(15, 'qtd_empresas_setor')
+
+            fig = px.bar(
+                df_top_emp,
+                x='qtd_empresas_setor',
+                y='cnae_divisao_descricao',
+                orientation='h',
+                color='qtd_empresas_setor',
+                color_continuous_scale='Blues',
+                labels={'qtd_empresas_setor': 'Quantidade de Empresas', 'cnae_divisao_descricao': 'Setor'}
+            )
+            fig.update_layout(height=600, showlegend=False)
+            fig.update_yaxes(tickfont=dict(size=9))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Scatter comparativo
+        st.markdown("---")
+        st.markdown("### 📊 Análise Comparativa de Setores")
+
+        fig = px.scatter(
+            df_benchmark,
+            x='media_liquidez_corrente_setor',
+            y='media_margem_liquida_setor',
+            size='qtd_empresas_setor',
+            color='media_roe_setor',
+            hover_name='cnae_divisao_descricao',
+            color_continuous_scale='RdYlGn',
+            labels={
+                'media_liquidez_corrente_setor': 'Liquidez Corrente Média',
+                'media_margem_liquida_setor': 'Margem Líquida Média (%)',
+                'media_roe_setor': 'ROE Médio (%)'
+            }
+        )
+        fig.add_vline(x=1, line_dash="dash", line_color="gray", annotation_text="Liquidez = 1")
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", annotation_text="Margem = 0%")
+        fig.update_layout(height=600)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Tabela completa
+        st.markdown("---")
+        st.markdown("### 📋 Tabela Completa de Benchmark Setorial")
+
+        # Filtro de setor
+        setores_disp = ['Todos'] + sorted(df_benchmark['cnae_divisao_descricao'].dropna().unique().tolist())
+        setor_filtro = st.selectbox("Filtrar por Setor", setores_disp)
+
+        df_filtrado_bench = df_benchmark.copy()
+        if setor_filtro != 'Todos':
+            df_filtrado_bench = df_filtrado_bench[df_filtrado_bench['cnae_divisao_descricao'] == setor_filtro]
+
+        df_exibir = df_filtrado_bench[[
+            'cnae_divisao_descricao', 'qtd_empresas_setor',
+            'media_ativo_total_setor', 'media_receita_liquida_setor',
+            'media_liquidez_corrente_setor', 'media_endividamento_setor',
+            'media_margem_liquida_setor', 'media_roe_setor'
+        ]].copy()
+
+        df_exibir.columns = [
+            'Setor', 'Qtd Empresas',
+            'Ativo Médio', 'Receita Média',
+            'Liquidez', 'Endividamento',
+            'Margem Líquida %', 'ROE %'
+        ]
+
+        df_exibir = limpar_dataframe_para_exibicao(df_exibir)
+        st.dataframe(
+            df_exibir.style.format({
+                'Qtd Empresas': '{:,.0f}',
+                'Ativo Médio': 'R$ {:,.0f}',
+                'Receita Média': 'R$ {:,.0f}',
+                'Liquidez': '{:.2f}',
+                'Endividamento': '{:.2f}',
+                'Margem Líquida %': '{:.2f}',
+                'ROE %': '{:.2f}'
+            }).background_gradient(subset=['Liquidez'], cmap='RdYlGn', vmin=0, vmax=2)
+              .background_gradient(subset=['Margem Líquida %'], cmap='RdYlGn', vmin=-10, vmax=20),
+            use_container_width=True,
+            height=500
+        )
+
+        # Exportar
+        st.markdown("---")
+        if st.button("📥 Exportar Benchmark (CSV)"):
+            csv = df_benchmark.to_csv(index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv,
+                file_name=f"benchmark_setorial_{ano_selecionado}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+    else:
+        st.warning("Não há dados de benchmark setorial disponíveis ou a tabela ainda não foi populada.")
+
 # =============================================================================
 # 11. RODAPÉ
 # =============================================================================
@@ -2758,6 +3546,7 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; padding: 20px; color: #666;'>
     <p><strong>Sistema ECD - Escrituração Contábil Digital</strong></p>
-    <p>Receita Estadual de Santa Catarina | Versão 2.0</p>
+    <p>Receita Estadual de Santa Catarina | Versão 2.1</p>
+    <p><small>Atualizado com análises NEAF, Inconsistências e Benchmark Setorial</small></p>
 </div>
 """, unsafe_allow_html=True)
