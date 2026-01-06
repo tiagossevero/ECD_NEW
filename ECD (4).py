@@ -134,6 +134,91 @@ st.markdown("""
         border-bottom: 3px solid #3b82f6;
         padding-bottom: 0.5rem;
     }
+
+    /* =================================================================
+       ESTILOS DE TOOLTIP APRIMORADOS
+       ================================================================= */
+    .tooltip-container {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+    }
+
+    .metric-card, .metric-card-green, .metric-card-red, .metric-card-blue, .metric-card-yellow {
+        position: relative;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover, .metric-card-green:hover, .metric-card-red:hover,
+    .metric-card-blue:hover, .metric-card-yellow:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+    }
+
+    /* Tooltip styling melhorado */
+    [data-tooltip] {
+        position: relative;
+        cursor: help;
+    }
+
+    [data-tooltip]::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(30, 58, 138, 0.95);
+        color: white;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: normal;
+        white-space: normal;
+        max-width: 300px;
+        min-width: 200px;
+        text-align: left;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        line-height: 1.4;
+    }
+
+    [data-tooltip]::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 8px solid transparent;
+        border-top-color: rgba(30, 58, 138, 0.95);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        z-index: 1000;
+    }
+
+    [data-tooltip]:hover::before,
+    [data-tooltip]:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Ícone de ajuda nos cards */
+    .help-icon {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 50%;
+        text-align: center;
+        line-height: 18px;
+        font-size: 12px;
+        margin-left: 5px;
+        vertical-align: middle;
+    }
+
     .metric-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -170,6 +255,40 @@ st.markdown("""
         border-radius: 15px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
+
+    /* =================================================================
+       INDICADORES E LEGENDA
+       ================================================================= */
+    .indicator-legend {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .indicator-legend h4 {
+        color: #1e3a8a;
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+
+    .indicator-legend ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .indicator-legend li {
+        padding: 5px 0;
+        font-size: 0.9rem;
+        color: #475569;
+    }
+
+    .indicator-legend li strong {
+        color: #1e40af;
+    }
+
     .alert-critico {
         background-color: #fee;
         border-left: 5px solid #e53e3e;
@@ -232,8 +351,98 @@ st.markdown("""
         border-left: 4px solid #0284c7;
         margin: 1rem 0;
     }
+
+    /* =================================================================
+       INFO BOX PARA EXPLICAÇÕES
+       ================================================================= */
+    .info-box {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1px solid #0284c7;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .info-box h5 {
+        color: #0369a1;
+        margin: 0 0 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-box p {
+        color: #0c4a6e;
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    /* Estilo para valores de referência */
+    .reference-value {
+        display: inline-block;
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .reference-good {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .reference-warning {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .reference-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# =============================================================================
+# FUNÇÕES AUXILIARES PARA TOOLTIPS E UX
+# =============================================================================
+
+def criar_card_com_tooltip(valor, titulo, tooltip, classe_css="metric-card"):
+    """Cria um card métrico com tooltip explicativo."""
+    return f"""
+    <div class='{classe_css}' data-tooltip='{tooltip}'>
+        <h3>{valor}</h3>
+        <p>{titulo} <span class='help-icon'>?</span></p>
+    </div>
+    """
+
+def criar_legenda_indicadores():
+    """Cria uma legenda explicativa para os principais indicadores."""
+    return """
+    <div class='indicator-legend'>
+        <h4>📖 Guia de Indicadores</h4>
+        <ul>
+            <li><strong>Liquidez Corrente:</strong> Capacidade de pagar dívidas de curto prazo. Ideal: <span class='reference-value reference-good'>> 1.0</span></li>
+            <li><strong>Endividamento:</strong> Proporção de dívidas sobre o ativo total. Ideal: <span class='reference-value reference-good'>< 50%</span></li>
+            <li><strong>Margem Líquida:</strong> Lucro após todos os custos sobre a receita. Ideal: <span class='reference-value reference-good'>> 5%</span></li>
+            <li><strong>ROA:</strong> Retorno sobre o Ativo - eficiência no uso dos ativos. Ideal: <span class='reference-value reference-good'>> 5%</span></li>
+            <li><strong>ROE:</strong> Retorno sobre Patrimônio Líquido - retorno para sócios. Ideal: <span class='reference-value reference-good'>> 10%</span></li>
+            <li><strong>Score de Risco:</strong> Pontuação de 0-10. <span class='reference-value reference-good'>0-3</span> Baixo | <span class='reference-value reference-warning'>4-6</span> Médio | <span class='reference-value reference-danger'>7-10</span> Alto</li>
+        </ul>
+    </div>
+    """
+
+def criar_info_box(titulo, descricao):
+    """Cria uma caixa informativa com destaque."""
+    return f"""
+    <div class='info-box'>
+        <h5>💡 {titulo}</h5>
+        <p>{descricao}</p>
+    </div>
+    """
 
 # =============================================================================
 # 5. FUNÇÕES DE CONEXÃO COM BANCO DE DADOS
@@ -439,129 +648,208 @@ def carregar_dados_empresa(_engine, cnpj):
         return {}
 
 @st.cache_data(ttl=3600)
-def carregar_empresas_alto_risco(_engine, limite=500):
+def carregar_empresas_alto_risco(_engine, limite=500, ano=None):
     """Carrega empresas com alto score de risco para fiscalização."""
     if _engine is None:
         return None
-    
+
+    # Primeiro, tentar carregar da tabela de score de risco consolidado
+    try:
+        # Verificar se a tabela tem dados
+        check_query = f"SELECT COUNT(*) as cnt FROM {DATABASE}.ecd_score_risco_consolidado LIMIT 1"
+        check_df = pd.read_sql(check_query, _engine)
+
+        if check_df.iloc[0]['cnt'] > 0:
+            # Tabela de score de risco tem dados - usar query completa
+            ano_filter = f"AND sr.ano_referencia = {ano}" if ano else ""
+
+            query = f"""
+            SELECT
+                sr.cnpj,
+                COALESCE(ec.nm_razao_social, 'N/A') as nm_razao_social,
+                COALESCE(ec.nm_fantasia, '') as nm_fantasia,
+                COALESCE(ec.cd_uf, 'N/A') as cd_uf,
+                COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
+                COALESCE(ec.empresa_grande_porte, 'N') as empresa_grande_porte,
+                sr.score_risco_total,
+                sr.classificacao_risco,
+                COALESCE(sr.score_equacao_contabil, 0) as score_equacao_contabil,
+                COALESCE(sr.score_neaf, 0) as score_neaf,
+                COALESCE(sr.score_risco_financeiro, 0) as score_risco_financeiro,
+                COALESCE(sr.qtd_indicios_neaf, 0) as qtd_indicios_neaf,
+                ROUND(COALESCE(ind.ativo_total, 0) / 1000000, 2) as ativo_milhoes,
+                ROUND(COALESCE(ind.receita_liquida, 0) / 1000000, 2) as receita_milhoes,
+                ROUND(COALESCE(ind.liquidez_corrente, 0), 2) as liquidez,
+                ROUND(COALESCE(ind.endividamento_geral, 0), 2) as endividamento,
+                ROUND(COALESCE(ind.margem_liquida_perc, 0), 2) as margem_liquida,
+                CASE
+                    WHEN sr.score_risco_total >= 7 AND COALESCE(ind.ativo_total, 0) >= 100000000 THEN 1
+                    WHEN sr.score_risco_total >= 7 OR COALESCE(ind.ativo_total, 0) >= 100000000 THEN 2
+                    WHEN sr.score_risco_total >= 5 THEN 3
+                    WHEN sr.score_risco_total >= 3 THEN 4
+                    ELSE 5
+                END as prioridade_fiscalizacao
+            FROM {DATABASE}.ecd_score_risco_consolidado sr
+            LEFT JOIN {DATABASE}.ecd_empresas_cadastro ec
+                ON sr.cnpj = ec.cnpj
+            LEFT JOIN {DATABASE}.ecd_indicadores_financeiros ind
+                ON sr.cnpj = ind.cnpj
+                AND sr.ano_referencia = ind.ano_referencia
+            WHERE sr.score_risco_total >= 3
+                {ano_filter}
+            ORDER BY prioridade_fiscalizacao ASC, sr.score_risco_total DESC
+            LIMIT {limite}
+            """
+            df = pd.read_sql(query, _engine)
+            return df
+        else:
+            # Tabela de score vazia - usar fallback com indicadores financeiros
+            return _carregar_empresas_risco_fallback(_engine, limite, ano)
+
+    except Exception as e:
+        # Se falhar, tentar fallback
+        try:
+            return _carregar_empresas_risco_fallback(_engine, limite, ano)
+        except Exception as e2:
+            st.error(f"Erro ao carregar empresas de alto risco: {e2}")
+            return None
+
+def _carregar_empresas_risco_fallback(_engine, limite=500, ano=None):
+    """Fallback: calcula risco baseado apenas em indicadores financeiros."""
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
+
     query = f"""
-    SELECT 
-        ec.cnpj,
-        ec.nm_razao_social,
-        ec.nm_fantasia,
-        ec.cd_uf,
-        ec.cnae_divisao_descricao as setor,
-        ec.empresa_grande_porte,
-        sr.score_risco_total,
-        sr.classificacao_risco,
-        sr.score_equacao_contabil,
-        sr.score_neaf,
-        sr.score_risco_financeiro,
-        sr.qtd_indicios_neaf,
-        ROUND(ind.ativo_total / 1000000, 2) as ativo_milhoes,
-        ROUND(ind.receita_liquida / 1000000, 2) as receita_milhoes,
-        ROUND(ind.liquidez_corrente, 2) as liquidez,
-        ROUND(ind.endividamento_geral, 2) as endividamento,
-        ROUND(ind.margem_liquida_perc, 2) as margem_liquida,
-        CASE 
-            WHEN sr.score_risco_total >= 7 AND ind.ativo_total >= 100000000 THEN 1
-            WHEN sr.score_risco_total >= 7 OR ind.ativo_total >= 100000000 THEN 2
-            WHEN sr.score_risco_total >= 5 THEN 3
-            WHEN sr.score_risco_total >= 3 THEN 4
-            ELSE 5
-        END as prioridade_fiscalizacao
-    FROM {DATABASE}.ecd_score_risco_consolidado sr
-    INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
-        ON sr.cnpj = ec.cnpj
-        AND sr.ano_referencia = CAST(ec.ano_referencia / 100 AS INT)
-    INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
-        ON sr.cnpj = ind.cnpj
-        AND sr.ano_referencia = ind.ano_referencia
-    WHERE sr.score_risco_total >= 3
-        AND sr.ano_referencia = (
-            SELECT MAX(ano_referencia)
-            FROM {DATABASE}.ecd_score_risco_consolidado
-        )
-    ORDER BY prioridade_fiscalizacao ASC, sr.score_risco_total DESC, ind.ativo_total DESC
+    SELECT
+        ind.cnpj,
+        COALESCE(ec.nm_razao_social, 'N/A') as nm_razao_social,
+        COALESCE(ec.nm_fantasia, '') as nm_fantasia,
+        COALESCE(ec.cd_uf, 'N/A') as cd_uf,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
+        COALESCE(ec.empresa_grande_porte, 'N') as empresa_grande_porte,
+        -- Calcular score de risco baseado em indicadores
+        CASE
+            WHEN ind.liquidez_corrente < 0.5 THEN 3
+            WHEN ind.liquidez_corrente < 1.0 THEN 2
+            ELSE 0
+        END +
+        CASE
+            WHEN ind.endividamento_geral > 0.9 THEN 3
+            WHEN ind.endividamento_geral > 0.7 THEN 2
+            ELSE 0
+        END +
+        CASE
+            WHEN ind.margem_liquida_perc < -10 THEN 3
+            WHEN ind.margem_liquida_perc < 0 THEN 1
+            ELSE 0
+        END as score_risco_total,
+        CASE
+            WHEN (CASE WHEN ind.liquidez_corrente < 0.5 THEN 3 WHEN ind.liquidez_corrente < 1.0 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.endividamento_geral > 0.9 THEN 3 WHEN ind.endividamento_geral > 0.7 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.margem_liquida_perc < -10 THEN 3 WHEN ind.margem_liquida_perc < 0 THEN 1 ELSE 0 END) >= 7 THEN 'Muito Alto'
+            WHEN (CASE WHEN ind.liquidez_corrente < 0.5 THEN 3 WHEN ind.liquidez_corrente < 1.0 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.endividamento_geral > 0.9 THEN 3 WHEN ind.endividamento_geral > 0.7 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.margem_liquida_perc < -10 THEN 3 WHEN ind.margem_liquida_perc < 0 THEN 1 ELSE 0 END) >= 5 THEN 'Alto'
+            WHEN (CASE WHEN ind.liquidez_corrente < 0.5 THEN 3 WHEN ind.liquidez_corrente < 1.0 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.endividamento_geral > 0.9 THEN 3 WHEN ind.endividamento_geral > 0.7 THEN 2 ELSE 0 END +
+                  CASE WHEN ind.margem_liquida_perc < -10 THEN 3 WHEN ind.margem_liquida_perc < 0 THEN 1 ELSE 0 END) >= 3 THEN 'Médio'
+            ELSE 'Baixo'
+        END as classificacao_risco,
+        0 as score_equacao_contabil,
+        0 as score_neaf,
+        0 as score_risco_financeiro,
+        0 as qtd_indicios_neaf,
+        ROUND(COALESCE(ind.ativo_total, 0) / 1000000, 2) as ativo_milhoes,
+        ROUND(COALESCE(ind.receita_liquida, 0) / 1000000, 2) as receita_milhoes,
+        ROUND(COALESCE(ind.liquidez_corrente, 0), 2) as liquidez,
+        ROUND(COALESCE(ind.endividamento_geral, 0), 2) as endividamento,
+        ROUND(COALESCE(ind.margem_liquida_perc, 0), 2) as margem_liquida,
+        3 as prioridade_fiscalizacao
+    FROM {DATABASE}.ecd_indicadores_financeiros ind
+    LEFT JOIN {DATABASE}.ecd_empresas_cadastro ec
+        ON ind.cnpj = ec.cnpj
+    WHERE 1=1
+        {ano_filter}
+        AND (ind.liquidez_corrente < 1.0 OR ind.endividamento_geral > 0.7 OR ind.margem_liquida_perc < 0)
+    ORDER BY
+        CASE WHEN ind.liquidez_corrente < 0.5 THEN 3 WHEN ind.liquidez_corrente < 1.0 THEN 2 ELSE 0 END +
+        CASE WHEN ind.endividamento_geral > 0.9 THEN 3 WHEN ind.endividamento_geral > 0.7 THEN 2 ELSE 0 END +
+        CASE WHEN ind.margem_liquida_perc < -10 THEN 3 WHEN ind.margem_liquida_perc < 0 THEN 1 ELSE 0 END DESC,
+        ind.ativo_total DESC
     LIMIT {limite}
     """
-    
-    try:
-        df = pd.read_sql(query, _engine)
-        return df
-    except Exception as e:
-        st.error(f"Erro ao carregar empresas de alto risco: {e}")
-        return None
+    df = pd.read_sql(query, _engine)
+    return df
 
 @st.cache_data(ttl=3600)
 def carregar_plano_contas_agregado(_engine, ano=None):
-    """Carrega estatísticas agregadas do plano de contas."""
+    """Carrega estatísticas agregadas do plano de contas (otimizado para evitar timeout)."""
     if _engine is None:
         return None
-    
-    # Filtros corretos para os formatos diferentes
-    # plano_contas: ano_referencia = 202401 (YYYYMM)
-    # saldos: ano_referencia = 2024 (YYYY)
-    ano_filter_plano = f"AND pc.ano_referencia BETWEEN {ano}01 AND {ano}12" if ano else ""
-    ano_filter_saldos = f"AND ano_referencia = {ano}" if ano else ""  # ⚠️ SEM 'sc.'!
-    
+
+    # Query simplificada - apenas plano de contas sem JOIN com saldos
+    # Isso evita o timeout causado pelo JOIN pesado
+    ano_filter_plano = f"AND ano_referencia BETWEEN {ano}01 AND {ano}12" if ano else ""
+
     query = f"""
-    WITH ultimo_saldo AS (
-        SELECT 
-            cnpj,
-            cd_conta,
-            saldo_final_contabil,
-            ano_referencia,
-            YEAR(data_fim_periodo) * 100 + MONTH(data_fim_periodo) as ano_mes,
-            ROW_NUMBER() OVER (PARTITION BY cnpj, cd_conta ORDER BY data_fim_periodo DESC) as rn
-        FROM {DATABASE}.ecd_saldos_contas_v2
-        WHERE 1=1
-            {ano_filter_saldos}
-    )
-    SELECT 
-        pc.cd_conta,
-        pc.nm_conta,
-        pc.descricao_grupo_balanco,
-        pc.cd_conta_referencial,
-        pc.tipo_conta,
-        pc.nivel_conta,
-        pc.cd_conta_sint1,
-        pc.nm_conta_sint1,
-        
-        COUNT(DISTINCT pc.cnpj) AS qtd_empresas_usam,
-        ROUND(AVG(ABS(sc.saldo_final_contabil)) / 1000000, 2) AS media_saldo_milhoes,
-        ROUND(SUM(ABS(sc.saldo_final_contabil)) / 1000000000, 2) AS total_saldo_bilhoes,
-        ROUND(MIN(sc.saldo_final_contabil) / 1000000, 2) AS min_saldo_milhoes,
-        ROUND(MAX(sc.saldo_final_contabil) / 1000000, 2) AS max_saldo_milhoes
-        
-    FROM {DATABASE}.ecd_plano_contas pc
-    LEFT JOIN ultimo_saldo sc
-        ON pc.cnpj = sc.cnpj
-        AND pc.cd_conta = sc.cd_conta
-        AND pc.ano_referencia = sc.ano_mes
-        AND sc.rn = 1
-    WHERE pc.tipo_conta = 'A'
+    SELECT
+        cd_conta,
+        nm_conta,
+        descricao_grupo_balanco,
+        cd_conta_referencial,
+        tipo_conta,
+        nivel_conta,
+        cd_conta_sint1,
+        nm_conta_sint1,
+        COUNT(DISTINCT cnpj) AS qtd_empresas_usam
+    FROM {DATABASE}.ecd_plano_contas
+    WHERE tipo_conta = 'A'
         {ano_filter_plano}
-    GROUP BY pc.cd_conta, pc.nm_conta, pc.descricao_grupo_balanco, pc.cd_conta_referencial,
-             pc.tipo_conta, pc.nivel_conta, pc.cd_conta_sint1, pc.nm_conta_sint1
-    HAVING COUNT(DISTINCT pc.cnpj) >= 5
-        AND SUM(ABS(COALESCE(sc.saldo_final_contabil, 0))) > 100000
+    GROUP BY cd_conta, nm_conta, descricao_grupo_balanco, cd_conta_referencial,
+             tipo_conta, nivel_conta, cd_conta_sint1, nm_conta_sint1
+    HAVING COUNT(DISTINCT cnpj) >= 5
     ORDER BY qtd_empresas_usam DESC
     LIMIT 200
     """
-    
+
     try:
         df = pd.read_sql(query, _engine)
-        
-        # Garantir que todas as colunas numéricas sejam do tipo correto
-        df['total_saldo_bilhoes'] = pd.to_numeric(df['total_saldo_bilhoes'], errors='coerce').fillna(0)
-        df['media_saldo_milhoes'] = pd.to_numeric(df['media_saldo_milhoes'], errors='coerce').fillna(0)
-        df['min_saldo_milhoes'] = pd.to_numeric(df['min_saldo_milhoes'], errors='coerce').fillna(0)
-        df['max_saldo_milhoes'] = pd.to_numeric(df['max_saldo_milhoes'], errors='coerce').fillna(0)
-        
+
+        # Adicionar colunas de saldo com valores padrão (serão carregados sob demanda se necessário)
+        df['media_saldo_milhoes'] = 0.0
+        df['total_saldo_bilhoes'] = 0.0
+        df['min_saldo_milhoes'] = 0.0
+        df['max_saldo_milhoes'] = 0.0
+
         return df
     except Exception as e:
         st.error(f"Erro ao carregar plano de contas: {e}")
+        return None
+
+@st.cache_data(ttl=3600)
+def carregar_saldos_conta_especifica(_engine, cd_conta, ano=None):
+    """Carrega saldos de uma conta específica (sob demanda)."""
+    if _engine is None:
+        return None
+
+    ano_filter = f"AND ano_referencia = {ano}" if ano else ""
+
+    query = f"""
+    SELECT
+        cnpj,
+        cd_conta,
+        saldo_final_contabil,
+        data_fim_periodo
+    FROM {DATABASE}.ecd_saldos_contas_v2
+    WHERE cd_conta = '{cd_conta}'
+        {ano_filter}
+    ORDER BY data_fim_periodo DESC
+    LIMIT 1000
+    """
+
+    try:
+        df = pd.read_sql(query, _engine)
+        return df
+    except Exception as e:
         return None
 
 @st.cache_data(ttl=3600)
@@ -706,40 +994,95 @@ def carregar_benchmark_setorial(_engine, ano=None):
     if _engine is None:
         return None
 
-    ano_filter = f"WHERE ano_referencia = {ano}" if ano else ""
+    # Primeiro, tentar carregar da tabela de benchmark
+    try:
+        ano_filter = f"WHERE ano_referencia = {ano}" if ano else ""
+
+        query = f"""
+        SELECT
+            cd_cnae,
+            de_cnae,
+            cnae_secao,
+            cnae_secao_descricao,
+            cnae_divisao,
+            cnae_divisao_descricao,
+            ano_referencia,
+            qtd_empresas_setor,
+            media_ativo_total_setor,
+            media_receita_liquida_setor,
+            media_resultado_liquido_setor,
+            media_liquidez_corrente_setor,
+            media_endividamento_setor,
+            media_margem_liquida_setor,
+            media_roe_setor,
+            min_liquidez_setor,
+            max_liquidez_setor,
+            min_margem_liquida_setor,
+            max_margem_liquida_setor
+        FROM {DATABASE}.ecd_benchmark_setorial
+        {ano_filter}
+        ORDER BY qtd_empresas_setor DESC
+        """
+
+        df = pd.read_sql(query, _engine)
+
+        if df is not None and not df.empty:
+            return df
+
+        # Tabela vazia - gerar benchmark a partir de indicadores
+        return _gerar_benchmark_dinamico(_engine, ano)
+
+    except Exception as e:
+        # Tabela não existe - gerar benchmark dinamicamente
+        try:
+            return _gerar_benchmark_dinamico(_engine, ano)
+        except Exception as e2:
+            st.error(f"Erro ao carregar benchmark setorial: {e2}")
+            return None
+
+def _gerar_benchmark_dinamico(_engine, ano=None):
+    """Gera benchmark setorial dinamicamente a partir dos dados de indicadores."""
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
 
     query = f"""
     SELECT
-        cd_cnae,
-        de_cnae,
-        cnae_secao,
-        cnae_secao_descricao,
-        cnae_divisao,
-        cnae_divisao_descricao,
-        ano_referencia,
-        qtd_empresas_setor,
-        media_ativo_total_setor,
-        media_receita_liquida_setor,
-        media_resultado_liquido_setor,
-        media_liquidez_corrente_setor,
-        media_endividamento_setor,
-        media_margem_liquida_setor,
-        media_roe_setor,
-        min_liquidez_setor,
-        max_liquidez_setor,
-        min_margem_liquida_setor,
-        max_margem_liquida_setor
-    FROM {DATABASE}.ecd_benchmark_setorial
-    {ano_filter}
+        COALESCE(ec.cnae_divisao, 'N/A') as cd_cnae,
+        COALESCE(ec.de_cnae, 'Não Classificado') as de_cnae,
+        COALESCE(ec.cnae_secao, 'N/A') as cnae_secao,
+        COALESCE(ec.cnae_secao_descricao, 'Não Classificado') as cnae_secao_descricao,
+        COALESCE(ec.cnae_divisao, 'N/A') as cnae_divisao,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as cnae_divisao_descricao,
+        {ano if ano else 2024} as ano_referencia,
+        COUNT(DISTINCT ec.cnpj) as qtd_empresas_setor,
+        ROUND(AVG(ind.ativo_total), 2) as media_ativo_total_setor,
+        ROUND(AVG(ind.receita_liquida), 2) as media_receita_liquida_setor,
+        ROUND(AVG(ind.resultado_liquido), 2) as media_resultado_liquido_setor,
+        ROUND(AVG(ind.liquidez_corrente), 2) as media_liquidez_corrente_setor,
+        ROUND(AVG(ind.endividamento_geral), 2) as media_endividamento_setor,
+        ROUND(AVG(ind.margem_liquida_perc), 2) as media_margem_liquida_setor,
+        ROUND(AVG(ind.roe_retorno_patrimonio_perc), 2) as media_roe_setor,
+        ROUND(MIN(ind.liquidez_corrente), 2) as min_liquidez_setor,
+        ROUND(MAX(ind.liquidez_corrente), 2) as max_liquidez_setor,
+        ROUND(MIN(ind.margem_liquida_perc), 2) as min_margem_liquida_setor,
+        ROUND(MAX(ind.margem_liquida_perc), 2) as max_margem_liquida_setor
+    FROM {DATABASE}.ecd_indicadores_financeiros ind
+    LEFT JOIN {DATABASE}.ecd_empresas_cadastro ec
+        ON ind.cnpj = ec.cnpj
+    WHERE 1=1
+        {ano_filter}
+    GROUP BY
+        COALESCE(ec.cnae_divisao, 'N/A'),
+        COALESCE(ec.de_cnae, 'Não Classificado'),
+        COALESCE(ec.cnae_secao, 'N/A'),
+        COALESCE(ec.cnae_secao_descricao, 'Não Classificado'),
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')
+    HAVING COUNT(DISTINCT ec.cnpj) >= 3
     ORDER BY qtd_empresas_setor DESC
+    LIMIT 100
     """
 
-    try:
-        df = pd.read_sql(query, _engine)
-        return df
-    except Exception as e:
-        st.error(f"Erro ao carregar benchmark setorial: {e}")
-        return None
+    df = pd.read_sql(query, _engine)
+    return df
 
 @st.cache_data(ttl=3600)
 def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None, threshold_max=None, ano=None):
@@ -1254,54 +1597,64 @@ st.sidebar.info("💡 **Dica:** Comece pela Visão Geral e depois navegue para a
 if pagina == "🏠 Visão Geral":
     st.markdown("<h1 class='main-header'>📊 Sistema ECD - Visão Geral</h1>", unsafe_allow_html=True)
     st.markdown("### Escrituração Contábil Digital - Dashboard Executivo")
-    
+
+    # Adicionar info box explicativo
+    st.markdown(criar_info_box(
+        "Como usar este dashboard",
+        "Passe o mouse sobre os cards para ver explicações detalhadas. Os indicadores são calculados com base nos dados da ECD das empresas. Use os filtros na barra lateral para ajustar o ano de referência."
+    ), unsafe_allow_html=True)
+
     # Carregar indicadores agregados
     with st.spinner("Carregando indicadores por setor..."):
         df_setores = carregar_indicadores_agregados(engine, ano_selecionado)
-    
+
     if df_setores is not None and not df_setores.empty:
         # Métricas principais
         col1, col2, col3, col4 = st.columns(4)
-        
+
         total_empresas = df_setores['qtd_empresas'].sum()
         media_ativo = df_setores['media_ativo_milhoes'].mean()
         media_receita = df_setores['media_receita_milhoes'].mean()
         media_liquidez = df_setores['media_liquidez'].mean()
-        
+
         with col1:
-            st.markdown(f"""
-            <div class='metric-card' title='Soma de empresas únicas de todos os setores analisados no ano {ano_selecionado}'>
-                <h3>{total_empresas:,}</h3>
-                <p>Empresas Analisadas ❓</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"{total_empresas:,}",
+                "Empresas Analisadas",
+                f"Total de empresas únicas com dados ECD no ano {ano_selecionado}. Representa a soma de CNPJs distintos em todos os setores econômicos.",
+                "metric-card"
+            ), unsafe_allow_html=True)
+
         with col2:
-            st.markdown(f"""
-            <div class='metric-card-green' title='Média do ativo total (em milhões) calculada sobre todos os setores. Fórmula: AVG(ativo_total) de todas empresas'>
-                <h3>R$ {media_ativo:,.1f}M</h3>
-                <p>Ativo Médio ❓</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"R$ {media_ativo:,.1f}M",
+                "Ativo Médio",
+                "Média do Ativo Total (em milhões) de todas as empresas. O Ativo representa todos os bens e direitos da empresa. Fórmula: Soma(Ativo Total) / Qtd Empresas.",
+                "metric-card-green"
+            ), unsafe_allow_html=True)
+
         with col3:
-            st.markdown(f"""
-            <div class='metric-card-blue' title='Média da receita líquida (em milhões) de todas as empresas. Fórmula: AVG(receita_liquida)'>
-                <h3>R$ {media_receita:,.1f}M</h3>
-                <p>Receita Média ❓</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"R$ {media_receita:,.1f}M",
+                "Receita Média",
+                "Média da Receita Líquida (em milhões) de vendas/serviços. Representa o faturamento após deduções de impostos e devoluções. Fórmula: Soma(Receita Líquida) / Qtd Empresas.",
+                "metric-card-blue"
+            ), unsafe_allow_html=True)
+
         with col4:
             cor_liquidez = 'metric-card-green' if media_liquidez > 1 else 'metric-card-red'
-            status_liquidez = 'Saudável (>1.0)' if media_liquidez > 1 else 'Atenção (<1.0)'
-            st.markdown(f"""
-            <div class='{cor_liquidez}' title='Média da Liquidez Corrente de todas empresas. Fórmula: AVG(Ativo Circulante / Passivo Circulante). {status_liquidez}'>
-                <h3>{media_liquidez:.2f}</h3>
-                <p>Liquidez Corrente Média ❓</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            status_liquidez = '✓ Saudável' if media_liquidez > 1 else '⚠ Atenção'
+            st.markdown(criar_card_com_tooltip(
+                f"{media_liquidez:.2f}",
+                f"Liquidez Corrente ({status_liquidez})",
+                f"Média da Liquidez Corrente = Ativo Circulante ÷ Passivo Circulante. Indica capacidade de pagar dívidas de curto prazo. Valores acima de 1.0 indicam boa saúde financeira. Atual: {status_liquidez}",
+                cor_liquidez
+            ), unsafe_allow_html=True)
+
+        # Adicionar legenda de indicadores
+        with st.expander("📖 Entenda os Indicadores Financeiros", expanded=False):
+            st.markdown(criar_legenda_indicadores(), unsafe_allow_html=True)
+
         st.markdown("---")
         
         # Gráficos principais
@@ -2023,72 +2376,80 @@ elif pagina == "🏢 Detalhamento de Empresa":
 
 elif pagina == "🎯 Fiscalização Inteligente (ML)":
     st.markdown("<h1 class='main-header'>🎯 Fiscalização Inteligente com Machine Learning</h1>", unsafe_allow_html=True)
-    
+
     st.markdown("""
     ### 🤖 Sistema de Detecção de Anomalias Contábeis
-    
+
     Este módulo utiliza algoritmos de Machine Learning para identificar empresas com comportamentos atípicos
     e maior probabilidade de irregularidades fiscais.
-    
-    **Técnicas utilizadas:**
-    - 🔍 **Isolation Forest**: Detecção de anomalias multivariadas
-    - 📊 **K-Means Clustering**: Agrupamento de empresas por perfil de risco
-    - 📈 **Score Composto**: Combinação de análises estatísticas e ML
     """)
-    
+
+    # Info box explicativo
+    st.markdown(criar_info_box(
+        "Como funciona a análise de ML",
+        "O sistema analisa múltiplas variáveis financeiras simultaneamente usando Isolation Forest (detecta outliers) e K-Means (agrupa empresas similares). Empresas com comportamento muito diferente do padrão recebem maior score de risco."
+    ), unsafe_allow_html=True)
+
+    with st.expander("📖 Técnicas de Machine Learning utilizadas"):
+        st.markdown("""
+        - 🔍 **Isolation Forest**: Algoritmo que isola anomalias identificando pontos de dados que são poucos e diferentes. Empresas com indicadores muito fora do padrão são marcadas como anomalias.
+        - 📊 **K-Means Clustering**: Agrupa empresas com perfis financeiros similares em clusters. Permite identificar grupos de risco.
+        - 📈 **Score Composto**: Combina o score de risco tradicional com a análise de ML para priorização mais precisa.
+        """)
+
     st.markdown("---")
-    
+
     # Carregar dados de alto risco
     with st.spinner("Carregando dados para análise de ML..."):
-        df_alto_risco = carregar_empresas_alto_risco(engine, limite=1000)
-    
+        df_alto_risco = carregar_empresas_alto_risco(engine, limite=1000, ano=ano_selecionado)
+
     if df_alto_risco is not None and not df_alto_risco.empty:
         # Treinar modelo
         with st.spinner("Treinando modelo de Machine Learning..."):
             dados_ml, scaler = treinar_modelo_fiscalizacao(df_alto_risco)
-        
+
         if dados_ml is not None:
             # Calcular score de ML
             df_ml_completo = calcular_score_ml(dados_ml, df_alto_risco)
-            
+
             # Métricas do modelo
             col1, col2, col3, col4 = st.columns(4)
-            
+
             with col1:
                 anomalias = (dados_ml['anomalia'] == -1).sum()
-                st.markdown(f"""
-                <div class='metric-card-red'>
-                    <h3>{anomalias}</h3>
-                    <p>Anomalias Detectadas</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
+                st.markdown(criar_card_com_tooltip(
+                    str(anomalias),
+                    "Anomalias Detectadas",
+                    "Empresas identificadas pelo Isolation Forest como outliers. Possuem comportamento financeiro muito diferente do padrão normal, podendo indicar irregularidades ou situações atípicas.",
+                    "metric-card-red"
+                ), unsafe_allow_html=True)
+
             with col2:
                 criticas = (df_ml_completo['prioridade_ml'] == 'Crítica').sum()
-                st.markdown(f"""
-                <div class='metric-card-red'>
-                    <h3>{criticas}</h3>
-                    <p>Prioridade Crítica</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
+                st.markdown(criar_card_com_tooltip(
+                    str(criticas),
+                    "Prioridade Crítica",
+                    "Empresas com Score ML Total acima de 11 pontos. Combinam alto score de risco tradicional com detecção de anomalia pelo ML. Devem ser priorizadas para fiscalização.",
+                    "metric-card-red"
+                ), unsafe_allow_html=True)
+
             with col3:
                 altas = (df_ml_completo['prioridade_ml'] == 'Alta').sum()
-                st.markdown(f"""
-                <div class='metric-card-yellow'>
-                    <h3>{altas}</h3>
-                    <p>Prioridade Alta</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
+                st.markdown(criar_card_com_tooltip(
+                    str(altas),
+                    "Prioridade Alta",
+                    "Empresas com Score ML Total entre 8 e 11 pontos. Apresentam indicadores de risco significativos e merecem atenção especial da fiscalização.",
+                    "metric-card-yellow"
+                ), unsafe_allow_html=True)
+
             with col4:
                 clusters = dados_ml['cluster'].nunique()
-                st.markdown(f"""
-                <div class='metric-card-blue'>
-                    <h3>{clusters}</h3>
-                    <p>Clusters Identificados</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(criar_card_com_tooltip(
+                    str(clusters),
+                    "Clusters Identificados",
+                    "Grupos de empresas com perfis financeiros similares identificados pelo K-Means. Cada cluster representa um padrão comportamental distinto.",
+                    "metric-card-blue"
+                ), unsafe_allow_html=True)
             
             st.markdown("---")
             
@@ -2199,60 +2560,93 @@ elif pagina == "🎯 Fiscalização Inteligente (ML)":
 
 elif pagina == "⚠️ Empresas Alto Risco":
     st.markdown("<h1 class='main-header'>⚠️ Empresas de Alto Risco</h1>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    ### Lista de empresas com score de risco elevado
-    
-    Baseado em análises de:
-    - ⚠️ Inconsistências na equação contábil
-    - 📊 Indicadores financeiros atípicos
-    - 🔍 Indícios de NEAF (Nota Fiscal de Entrada Ausente de Fornecedor)
-    - 💰 Relevância financeira (ativo e receita)
-    """)
-    
+
+    st.markdown("### Lista de empresas com score de risco elevado")
+
+    # Info box explicativo
+    st.markdown(criar_info_box(
+        "Critérios de Classificação de Risco",
+        "O score de risco (0-10) é calculado combinando: inconsistências contábeis, indicadores financeiros fora do padrão, indícios de NEAF e relevância financeira. Prioridade 1 = Crítica (score ≥7 + ativo ≥100M)."
+    ), unsafe_allow_html=True)
+
+    with st.expander("📖 Entenda os critérios de risco"):
+        st.markdown("""
+        **Componentes do Score de Risco:**
+        - ⚠️ **Inconsistências na equação contábil**: Diferenças entre Ativo e (Passivo + PL)
+        - 📊 **Indicadores financeiros atípicos**: Liquidez baixa, endividamento alto, margem negativa
+        - 🔍 **Indícios de NEAF**: Nota Fiscal de Entrada Ausente de Fornecedor
+        - 💰 **Relevância financeira**: Considera ativo e receita para priorização
+
+        **Níveis de Prioridade:**
+        1. 🔴 **Crítica (1)**: Score ≥7 E Ativo ≥100M - Fiscalização imediata
+        2. 🟠 **Alta (2)**: Score ≥7 OU Ativo ≥100M - Fiscalização prioritária
+        3. 🟡 **Média (3)**: Score ≥5 - Acompanhamento próximo
+        4. 🟢 **Baixa (4-5)**: Score 3-5 - Monitoramento regular
+        """)
+
     st.markdown("---")
-    
+
     # Filtros
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        min_score = st.slider("Score Mínimo de Risco", 0, 10, 5)
-    
+        min_score = st.slider("Score Mínimo de Risco", 0, 10, 5, help="Filtrar empresas com score igual ou acima deste valor")
+
     with col2:
         ufs = ['Todos', 'SC', 'PR', 'RS', 'SP', 'RJ', 'MG']
-        uf_filtro = st.selectbox("Filtrar por UF", ufs)
-    
+        uf_filtro = st.selectbox("Filtrar por UF", ufs, help="Filtrar por Unidade Federativa")
+
     with col3:
-        limite_registros = st.selectbox("Quantidade de registros", [50, 100, 200, 500], index=2)
-    
+        limite_registros = st.selectbox("Quantidade de registros", [50, 100, 200, 500], index=2, help="Limite de empresas a exibir")
+
     # Carregar dados
     with st.spinner("Carregando empresas de alto risco..."):
-        df_alto_risco = carregar_empresas_alto_risco(engine, limite=limite_registros)
-    
+        df_alto_risco = carregar_empresas_alto_risco(engine, limite=limite_registros, ano=ano_selecionado)
+
     if df_alto_risco is not None and not df_alto_risco.empty:
         # Aplicar filtros
         df_filtrado = df_alto_risco[df_alto_risco['score_risco_total'] >= min_score].copy()
-        
+
         if uf_filtro != 'Todos':
             df_filtrado = df_filtrado[df_filtrado['cd_uf'] == uf_filtro]
-        
-        # Estatísticas
+
+        # Estatísticas com tooltips
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
-            st.metric("Empresas Listadas", len(df_filtrado))
-        
+            st.markdown(criar_card_com_tooltip(
+                str(len(df_filtrado)),
+                "Empresas Listadas",
+                f"Total de empresas com score de risco ≥ {min_score} após aplicação dos filtros selecionados.",
+                "metric-card"
+            ), unsafe_allow_html=True)
+
         with col2:
-            media_score = df_filtrado['score_risco_total'].mean()
-            st.metric("Score Médio", f"{media_score:.2f}")
-        
+            media_score = df_filtrado['score_risco_total'].mean() if len(df_filtrado) > 0 else 0
+            st.markdown(criar_card_com_tooltip(
+                f"{media_score:.2f}",
+                "Score Médio",
+                "Média do score de risco das empresas listadas. Quanto maior, mais crítico o grupo. Escala de 0 a 10.",
+                "metric-card-yellow"
+            ), unsafe_allow_html=True)
+
         with col3:
-            criticas = (df_filtrado['prioridade_fiscalizacao'] == 1).sum()
-            st.metric("Prioridade Crítica", criticas)
-        
+            criticas = (df_filtrado['prioridade_fiscalizacao'] == 1).sum() if len(df_filtrado) > 0 else 0
+            st.markdown(criar_card_com_tooltip(
+                str(criticas),
+                "Prioridade Crítica",
+                "Empresas com prioridade 1 (crítica). Combinam alto score de risco (≥7) com alto ativo (≥100M). Devem ser fiscalizadas com urgência.",
+                "metric-card-red"
+            ), unsafe_allow_html=True)
+
         with col4:
-            ativo_total = df_filtrado['ativo_milhoes'].sum()
-            st.metric("Ativo Total", f"R$ {ativo_total:,.0f}M")
+            ativo_total = df_filtrado['ativo_milhoes'].sum() if len(df_filtrado) > 0 else 0
+            st.markdown(criar_card_com_tooltip(
+                f"R$ {ativo_total:,.0f}M",
+                "Ativo Total",
+                "Soma do ativo total (em milhões) de todas as empresas listadas. Representa a relevância financeira do grupo analisado.",
+                "metric-card-blue"
+            ), unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -2579,60 +2973,71 @@ elif pagina == "📉 Indicadores Financeiros":
 
 elif pagina == "🗂️ Plano de Contas":
     st.markdown("<h1 class='main-header'>🗂️ Análise do Plano de Contas</h1>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    ### Sistema de contas contábeis mais utilizadas pelas empresas
-    
-    Esta análise mostra:
-    - 📊 Contas mais comuns entre as empresas
-    - 💰 Estatísticas de saldos (média, mínimo, máximo)
-    - 🏢 Quantidade de empresas que utilizam cada conta
-    - 📈 Distribuição por grupo de balanço
-    """)
-    
+
+    st.markdown("### Sistema de contas contábeis mais utilizadas pelas empresas")
+
+    # Info box explicativo
+    st.markdown(criar_info_box(
+        "O que é o Plano de Contas",
+        "Estrutura padronizada de contas contábeis usadas pelas empresas na ECD. Analise quais contas são mais utilizadas e identifique padrões de uso entre os setores."
+    ), unsafe_allow_html=True)
+
+    with st.expander("📖 Como interpretar esta análise"):
+        st.markdown("""
+        **Conceitos importantes:**
+        - **Conta Analítica (Tipo A)**: Conta de menor nível que recebe lançamentos contábeis
+        - **Conta Sintética (Tipo S)**: Conta agregadora que soma saldos das contas analíticas
+        - **Nível**: Profundidade da conta na hierarquia (1 = mais alto, 5+ = mais detalhado)
+
+        **Usos para fiscalização:**
+        - Contas muito usadas devem ter saldos consistentes entre empresas similares
+        - Contas pouco usadas podem indicar classificações incorretas
+        - Grandes variações de saldo na mesma conta sugerem revisão
+        """)
+
     # Carregar dados do plano de contas
     with st.spinner("Carregando plano de contas..."):
         df_plano = carregar_plano_contas_agregado(engine, ano_selecionado)
-    
+
     if df_plano is not None and not df_plano.empty:
-        # Estatísticas gerais
+        # Estatísticas gerais com tooltips
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             total_contas = len(df_plano)
-            st.markdown(f"""
-            <div class='metric-card'>
-                <h3>{total_contas:,}</h3>
-                <p>Contas Analisadas</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"{total_contas:,}",
+                "Contas Analisadas",
+                f"Total de contas analíticas (tipo A) distintas encontradas no plano de contas das empresas no ano {ano_selecionado}. Filtradas por uso mínimo de 5 empresas.",
+                "metric-card"
+            ), unsafe_allow_html=True)
+
         with col2:
             media_empresas = df_plano['qtd_empresas_usam'].mean()
-            st.markdown(f"""
-            <div class='metric-card-blue'>
-                <h3>{media_empresas:.0f}</h3>
-                <p>Média Empresas/Conta</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"{media_empresas:.0f}",
+                "Média Empresas/Conta",
+                "Número médio de empresas que utilizam cada conta. Contas com uso acima desta média são mais universais.",
+                "metric-card-blue"
+            ), unsafe_allow_html=True)
+
         with col3:
             total_saldo = df_plano['total_saldo_bilhoes'].sum()
-            st.markdown(f"""
-            <div class='metric-card-green'>
-                <h3>R$ {total_saldo:.1f}B</h3>
-                <p>Total em Saldos</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            st.markdown(criar_card_com_tooltip(
+                f"R$ {total_saldo:.1f}B",
+                "Total em Saldos",
+                "Soma dos saldos finais de todas as contas analisadas (em bilhões). Nota: otimizado para carregamento rápido.",
+                "metric-card-green"
+            ), unsafe_allow_html=True)
+
         with col4:
             conta_mais_usada = df_plano.iloc[0]['qtd_empresas_usam']
-            st.markdown(f"""
-            <div class='metric-card-yellow'>
-                <h3>{conta_mais_usada:,}</h3>
-                <p>Conta Mais Popular</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(criar_card_com_tooltip(
+                f"{conta_mais_usada:,}",
+                "Conta Mais Popular",
+                f"Número de empresas que utilizam a conta mais comum: {df_plano.iloc[0]['nm_conta'][:30]}...",
+                "metric-card-yellow"
+            ), unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -2928,7 +3333,14 @@ elif pagina == "🗂️ Plano de Contas":
                     if pd.notna(cv) and not np.isinf(cv):
                         st.write(f"- {conta['cd_conta']}: {conta['nm_conta']} (CV: {cv:.1f}%)")
     else:
-        st.error("Não foi possível carregar os dados do plano de contas.")
+        st.warning(f"""
+        **Não foi possível carregar os dados do plano de contas para {ano_selecionado}.**
+
+        Possíveis causas:
+        - A tabela de plano de contas não possui dados para este ano
+        - Problema de conexão com o banco de dados
+        - Tente selecionar um ano diferente na barra lateral
+        """)
 
 # ---------------------------------------------------------------------------
 # PÁGINA: INDÍCIOS NEAF
@@ -3339,14 +3751,26 @@ elif pagina == "⚖️ Inconsistências Contábeis":
 elif pagina == "📈 Benchmark Setorial":
     st.markdown("<h1 class='main-header'>📈 Benchmark Setorial</h1>", unsafe_allow_html=True)
 
-    st.markdown("""
-    ### Análise Comparativa por Setor Econômico (CNAE)
+    st.markdown("### Análise Comparativa por Setor Econômico (CNAE)")
 
-    Compare indicadores financeiros entre setores:
-    - 📊 **Médias setoriais** de ativo, receita e indicadores
-    - 📈 **Percentis** para identificar outliers
-    - 🏆 **Ranking** de desempenho por setor
-    """)
+    # Info box explicativo
+    st.markdown(criar_info_box(
+        "O que é Benchmark Setorial",
+        "Comparação de indicadores financeiros entre setores econômicos. Permite identificar setores com melhor/pior desempenho e empresas que se desviam significativamente da média do seu setor."
+    ), unsafe_allow_html=True)
+
+    with st.expander("📖 Como usar o Benchmark"):
+        st.markdown("""
+        **Aplicações do Benchmark Setorial:**
+        - 📊 **Identificar outliers**: Empresas muito acima/abaixo da média setorial
+        - 🎯 **Priorizar fiscalização**: Focar em setores com indicadores atípicos
+        - 📈 **Análise de tendências**: Comparar evolução de setores ao longo do tempo
+        - 🔍 **Detectar anomalias**: Setores com comportamento incomum podem indicar irregularidades sistêmicas
+
+        **Interpretação dos Indicadores:**
+        - Valores muito acima da média podem indicar excelência ou manipulação
+        - Valores muito abaixo podem indicar dificuldades ou subfaturamento
+        """)
 
     st.markdown("---")
 
@@ -3355,44 +3779,46 @@ elif pagina == "📈 Benchmark Setorial":
         df_benchmark = carregar_benchmark_setorial(engine, ano=ano_selecionado)
 
     if df_benchmark is not None and not df_benchmark.empty:
-        # Métricas principais
+        # Métricas principais com tooltips
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             total_setores = len(df_benchmark)
-            st.markdown(f"""
-            <div class='metric-card'>
-                <h3>{total_setores}</h3>
-                <p>Setores Analisados</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(criar_card_com_tooltip(
+                str(total_setores),
+                "Setores Analisados",
+                f"Quantidade de setores econômicos (CNAE) com dados disponíveis no ano {ano_selecionado}. Cada setor agrupa empresas com atividades similares.",
+                "metric-card"
+            ), unsafe_allow_html=True)
 
         with col2:
             total_empresas = df_benchmark['qtd_empresas_setor'].sum()
-            st.markdown(f"""
-            <div class='metric-card-blue'>
-                <h3>{total_empresas:,}</h3>
-                <p>Total de Empresas</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(criar_card_com_tooltip(
+                f"{total_empresas:,}",
+                "Total de Empresas",
+                "Soma de todas as empresas em todos os setores analisados. Base para cálculo das médias setoriais.",
+                "metric-card-blue"
+            ), unsafe_allow_html=True)
 
         with col3:
             media_liquidez = df_benchmark['media_liquidez_corrente_setor'].mean()
-            st.markdown(f"""
-            <div class='metric-card-green'>
-                <h3>{media_liquidez:.2f}</h3>
-                <p>Liquidez Média Geral</p>
-            </div>
-            """, unsafe_allow_html=True)
+            status_liq = "✓ Saudável" if media_liquidez > 1 else "⚠ Atenção"
+            st.markdown(criar_card_com_tooltip(
+                f"{media_liquidez:.2f}",
+                f"Liquidez Média ({status_liq})",
+                f"Média da Liquidez Corrente de todos os setores. Indica capacidade geral de pagamento. Valores > 1.0 indicam boa saúde. Atual: {status_liq}",
+                "metric-card-green" if media_liquidez > 1 else "metric-card-red"
+            ), unsafe_allow_html=True)
 
         with col4:
             media_margem = df_benchmark['media_margem_liquida_setor'].mean()
-            st.markdown(f"""
-            <div class='metric-card-yellow'>
-                <h3>{media_margem:.2f}%</h3>
-                <p>Margem Média Geral</p>
-            </div>
-            """, unsafe_allow_html=True)
+            status_marg = "✓ Positiva" if media_margem > 0 else "⚠ Negativa"
+            st.markdown(criar_card_com_tooltip(
+                f"{media_margem:.2f}%",
+                f"Margem Média ({status_marg})",
+                f"Média da Margem Líquida de todos os setores. Representa a lucratividade geral. Valores > 5% são considerados bons. Atual: {status_marg}",
+                "metric-card-yellow" if media_margem > 0 else "metric-card-red"
+            ), unsafe_allow_html=True)
 
         st.markdown("---")
 
@@ -3536,7 +3962,14 @@ elif pagina == "📈 Benchmark Setorial":
                 mime="text/csv"
             )
     else:
-        st.warning("Não há dados de benchmark setorial disponíveis ou a tabela ainda não foi populada.")
+        st.warning(f"""
+        **Não há dados de benchmark setorial disponíveis para {ano_selecionado}.**
+
+        Possíveis causas:
+        - A tabela de benchmark não foi populada para este ano
+        - Não há dados de indicadores financeiros suficientes para gerar o benchmark
+        - Tente selecionar um ano diferente na barra lateral
+        """)
 
 # =============================================================================
 # 11. RODAPÉ
@@ -3546,7 +3979,8 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; padding: 20px; color: #666;'>
     <p><strong>Sistema ECD - Escrituração Contábil Digital</strong></p>
-    <p>Receita Estadual de Santa Catarina | Versão 2.1</p>
-    <p><small>Atualizado com análises NEAF, Inconsistências e Benchmark Setorial</small></p>
+    <p>Receita Estadual de Santa Catarina | Versão 2.2</p>
+    <p><small>Atualizado com tooltips explicativos, melhorias de UX e queries otimizadas</small></p>
+    <p><small>💡 Passe o mouse sobre os cards para ver explicações detalhadas dos indicadores</small></p>
 </div>
 """, unsafe_allow_html=True)
