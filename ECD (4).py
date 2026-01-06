@@ -305,7 +305,7 @@ def carregar_indicadores_agregados(_engine, ano=None):
     if _engine is None:
         return None
 
-    ano_filter = f"AND CAST(ind.ano_referencia / 100 AS INT) = {ano}" if ano else ""
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
 
     query = f"""
     SELECT
@@ -321,7 +321,7 @@ def carregar_indicadores_agregados(_engine, ano=None):
     FROM {DATABASE}.ecd_empresas_cadastro ec
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON ec.cnpj = ind.cnpj
-        AND CAST(ec.ano_referencia / 100 AS INT) = CAST(ind.ano_referencia / 100 AS INT)
+        AND CAST(ec.ano_referencia / 100 AS INT) = ind.ano_referencia
     WHERE 1=1
         {ano_filter}
     GROUP BY COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')
@@ -342,11 +342,11 @@ def carregar_empresas_por_setor(_engine, setor, ano=None):
     """Carrega lista de empresas de um setor específico."""
     if _engine is None:
         return None
-    
-    ano_filter = f"AND CAST(ec.ano_referencia / 100 AS INT) = {ano}" if ano else ""
-    
+
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
+
     query = f"""
-    SELECT 
+    SELECT
         ec.cnpj,
         ec.nm_razao_social,
         ec.nm_fantasia,
@@ -361,11 +361,11 @@ def carregar_empresas_por_setor(_engine, setor, ano=None):
     FROM {DATABASE}.ecd_empresas_cadastro ec
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON ec.cnpj = ind.cnpj
-        AND CAST(ec.ano_referencia / 100 AS INT) = CAST(ind.ano_referencia / 100 AS INT)
+        AND CAST(ec.ano_referencia / 100 AS INT) = ind.ano_referencia
     LEFT JOIN {DATABASE}.ecd_score_risco_consolidado sr
         ON ec.cnpj = sr.cnpj
-        AND CAST(ec.ano_referencia / 100 AS INT) = CAST(sr.ano_referencia / 100 AS INT)
-    WHERE ec.cnae_divisao_descricao = '{setor}'
+        AND CAST(ec.ano_referencia / 100 AS INT) = sr.ano_referencia
+    WHERE COALESCE(ec.cnae_divisao_descricao, ec.de_cnae) = '{setor}'
         {ano_filter}
     ORDER BY ind.ativo_total DESC
     LIMIT 200
@@ -473,13 +473,13 @@ def carregar_empresas_alto_risco(_engine, limite=500):
     FROM {DATABASE}.ecd_score_risco_consolidado sr
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON sr.cnpj = ec.cnpj
-        AND CAST(sr.ano_referencia / 100 AS INT) = CAST(ec.ano_referencia / 100 AS INT)
+        AND sr.ano_referencia = CAST(ec.ano_referencia / 100 AS INT)
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON sr.cnpj = ind.cnpj
-        AND CAST(sr.ano_referencia / 100 AS INT) = CAST(ind.ano_referencia / 100 AS INT)
+        AND sr.ano_referencia = ind.ano_referencia
     WHERE sr.score_risco_total >= 3
-        AND CAST(sr.ano_referencia / 100 AS INT) = (
-            SELECT MAX(CAST(ano_referencia / 100 AS INT))
+        AND sr.ano_referencia = (
+            SELECT MAX(ano_referencia)
             FROM {DATABASE}.ecd_score_risco_consolidado
         )
     ORDER BY prioridade_fiscalizacao ASC, sr.score_risco_total DESC, ind.ativo_total DESC
@@ -628,13 +628,14 @@ def carregar_inconsistencias_equacao(_engine, ano=None, limite=500):
     if _engine is None:
         return None
 
+    # ie.ano_referencia é YYYYMM, então filtramos pelo ano
     ano_filter = f"AND CAST(ie.ano_referencia / 100 AS INT) = {ano}" if ano else ""
 
     query = f"""
     SELECT
         ie.cnpj,
         ec.nm_razao_social,
-        ec.cnae_divisao_descricao as setor,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
         ec.cd_uf,
         ie.ano_referencia,
         ie.data_fim_periodo,
@@ -647,7 +648,7 @@ def carregar_inconsistencias_equacao(_engine, ano=None, limite=500):
     FROM {DATABASE}.ecd_inconsistencias_equacao ie
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON ie.cnpj = ec.cnpj
-        AND CAST(ie.ano_referencia / 100 AS INT) = CAST(ec.ano_referencia / 100 AS INT)
+        AND ie.ano_referencia = ec.ano_referencia
     WHERE ie.classificacao_inconsistencia != 'OK'
         {ano_filter}
     ORDER BY ie.score_risco_equacao DESC, ABS(ie.diferenca_absoluta) DESC
@@ -667,19 +668,18 @@ def carregar_inconsistencias_variacoes(_engine, ano=None, limite=500):
     if _engine is None:
         return None
 
-    ano_filter = f"AND ano_atual = {ano}" if ano else ""
+    ano_filter = f"AND iv.ano_referencia = {ano}" if ano else ""
 
     query = f"""
     SELECT
         iv.cnpj,
         ec.nm_razao_social,
-        ec.cnae_divisao_descricao as setor,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
         ec.cd_uf,
         iv.cd_conta,
-        iv.ano_anterior,
-        iv.ano_atual,
-        iv.saldo_ano_anterior,
-        iv.saldo_ano_atual,
+        iv.ano_referencia,
+        iv.saldo_anterior,
+        iv.saldo_atual,
         iv.variacao_absoluta,
         iv.variacao_percentual,
         iv.classificacao_variacao,
@@ -687,7 +687,7 @@ def carregar_inconsistencias_variacoes(_engine, ano=None, limite=500):
     FROM {DATABASE}.ecd_inconsistencias_variacoes iv
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON iv.cnpj = ec.cnpj
-    WHERE iv.classificacao_variacao IN ('CRITICO', 'ALTO', 'SUSPEITO')
+    WHERE iv.classificacao_variacao IN ('Variação Extrema', 'Variação Muito Alta', 'Variação Alta')
         {ano_filter}
     ORDER BY iv.score_risco_variacao DESC, ABS(iv.variacao_percentual) DESC
     LIMIT {limite}
@@ -712,6 +712,8 @@ def carregar_benchmark_setorial(_engine, ano=None):
     SELECT
         cd_cnae,
         de_cnae,
+        cnae_secao,
+        cnae_secao_descricao,
         cnae_divisao,
         cnae_divisao_descricao,
         ano_referencia,
@@ -723,12 +725,10 @@ def carregar_benchmark_setorial(_engine, ano=None):
         media_endividamento_setor,
         media_margem_liquida_setor,
         media_roe_setor,
-        percentil_25_ativo,
-        percentil_50_ativo,
-        percentil_75_ativo,
-        percentil_25_receita,
-        percentil_50_receita,
-        percentil_75_receita
+        min_liquidez_setor,
+        max_liquidez_setor,
+        min_margem_liquida_setor,
+        max_margem_liquida_setor
     FROM {DATABASE}.ecd_benchmark_setorial
     {ano_filter}
     ORDER BY qtd_empresas_setor DESC
@@ -747,7 +747,7 @@ def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None
     if _engine is None:
         return None
     
-    ano_filter = f"AND CAST(ind.ano_referencia / 100 AS INT) = {ano}" if ano else ""
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
     
     # Mapear indicador para coluna e condições
     condicoes = {
@@ -783,10 +783,10 @@ def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None
     FROM {DATABASE}.ecd_indicadores_financeiros ind
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON ind.cnpj = ec.cnpj
-        AND CAST(ind.ano_referencia / 100 AS INT) = CAST(ec.ano_referencia / 100 AS INT)
+        AND ind.ano_referencia = CAST(ec.ano_referencia / 100 AS INT)
     LEFT JOIN {DATABASE}.ecd_score_risco_consolidado sr
         ON ind.cnpj = sr.cnpj
-        AND CAST(ind.ano_referencia / 100 AS INT) = CAST(sr.ano_referencia / 100 AS INT)
+        AND ind.ano_referencia = sr.ano_referencia
     WHERE {condicao}
         {ano_filter}
     ORDER BY valor_indicador {ordem}
@@ -3259,7 +3259,7 @@ elif pagina == "⚖️ Inconsistências Contábeis":
                 st.metric("Empresas Afetadas", empresas_afetadas)
 
             with col3:
-                criticos = (df_variacoes['classificacao_variacao'] == 'CRITICO').sum()
+                criticos = (df_variacoes['classificacao_variacao'] == 'Variação Extrema').sum()
                 st.metric("Variações Críticas", criticos)
 
             with col4:
@@ -3279,9 +3279,9 @@ elif pagina == "⚖️ Inconsistências Contábeis":
                     names=class_counts.index,
                     color=class_counts.index,
                     color_discrete_map={
-                        'CRITICO': '#d32f2f',
-                        'ALTO': '#f57c00',
-                        'SUSPEITO': '#fbc02d'
+                        'Variação Extrema': '#d32f2f',
+                        'Variação Muito Alta': '#f57c00',
+                        'Variação Alta': '#fbc02d'
                     }
                 )
                 fig.update_layout(height=350)
@@ -3307,7 +3307,7 @@ elif pagina == "⚖️ Inconsistências Contábeis":
 
             df_exibir = df_variacoes[[
                 'nm_razao_social', 'cnpj', 'setor', 'cd_conta',
-                'saldo_ano_anterior', 'saldo_ano_atual', 'variacao_absoluta',
+                'saldo_anterior', 'saldo_atual', 'variacao_absoluta',
                 'variacao_percentual', 'classificacao_variacao', 'score_risco_variacao'
             ]].copy()
 
