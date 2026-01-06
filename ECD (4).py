@@ -304,12 +304,12 @@ def carregar_indicadores_agregados(_engine, ano=None):
     """Carrega indicadores financeiros agregados por setor."""
     if _engine is None:
         return None
-    
+
     ano_filter = f"AND CAST(ind.ano_referencia / 100 AS INT) = {ano}" if ano else ""
-    
+
     query = f"""
-    SELECT 
-        ec.cnae_divisao_descricao as setor,
+    SELECT
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
         COUNT(DISTINCT ec.cnpj) as qtd_empresas,
         ROUND(AVG(ind.ativo_total) / 1000000, 2) as media_ativo_milhoes,
         ROUND(AVG(ind.receita_liquida) / 1000000, 2) as media_receita_milhoes,
@@ -322,13 +322,14 @@ def carregar_indicadores_agregados(_engine, ano=None):
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON ec.cnpj = ind.cnpj
         AND CAST(ec.ano_referencia / 100 AS INT) = CAST(ind.ano_referencia / 100 AS INT)
-    WHERE ec.cnae_divisao_descricao IS NOT NULL
+    WHERE 1=1
         {ano_filter}
-    GROUP BY ec.cnae_divisao_descricao
+    GROUP BY COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')
+    HAVING COUNT(DISTINCT ec.cnpj) > 0
     ORDER BY qtd_empresas DESC
     LIMIT 50
     """
-    
+
     try:
         df = pd.read_sql(query, _engine)
         return df
@@ -767,18 +768,18 @@ def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None
         ec.cnpj,
         ec.nm_razao_social,
         ec.cd_uf,
-        ec.cnae_divisao_descricao as setor,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
         ROUND(ind.{coluna}, 2) as valor_indicador,
         ROUND(ind.ativo_total / 1000000, 2) as ativo_milhoes,
         ROUND(ind.receita_liquida / 1000000, 2) as receita_milhoes,
         sr.score_risco_total,
-        
+
         -- Média do setor
-        ROUND(AVG(ind.{coluna}) OVER (PARTITION BY ec.cnae_divisao_descricao), 2) as media_setor,
-        
+        ROUND(AVG(ind.{coluna}) OVER (PARTITION BY COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')), 2) as media_setor,
+
         -- Desvio da média
-        ROUND(ind.{coluna} - AVG(ind.{coluna}) OVER (PARTITION BY ec.cnae_divisao_descricao), 2) as desvio_setor
-        
+        ROUND(ind.{coluna} - AVG(ind.{coluna}) OVER (PARTITION BY COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')), 2) as desvio_setor
+
     FROM {DATABASE}.ecd_indicadores_financeiros ind
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON ind.cnpj = ec.cnpj
@@ -788,7 +789,6 @@ def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None
         AND CAST(ind.ano_referencia / 100 AS INT) = CAST(sr.ano_referencia / 100 AS INT)
     WHERE {condicao}
         {ano_filter}
-        AND ec.cnae_divisao_descricao IS NOT NULL
     ORDER BY valor_indicador {ordem}
     LIMIT 100
     """
