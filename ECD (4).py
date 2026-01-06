@@ -321,7 +321,7 @@ def carregar_indicadores_agregados(_engine, ano=None):
     FROM {DATABASE}.ecd_empresas_cadastro ec
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON ec.cnpj = ind.cnpj
-        AND ec.ano_referencia = ind.ano_referencia
+        AND CAST(ec.ano_referencia / 100 AS INT) = ind.ano_referencia
     WHERE 1=1
         {ano_filter}
     GROUP BY COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado')
@@ -342,11 +342,11 @@ def carregar_empresas_por_setor(_engine, setor, ano=None):
     """Carrega lista de empresas de um setor específico."""
     if _engine is None:
         return None
-    
-    ano_filter = f"AND ec.ano_referencia = {ano}" if ano else ""
-    
+
+    ano_filter = f"AND ind.ano_referencia = {ano}" if ano else ""
+
     query = f"""
-    SELECT 
+    SELECT
         ec.cnpj,
         ec.nm_razao_social,
         ec.nm_fantasia,
@@ -361,11 +361,11 @@ def carregar_empresas_por_setor(_engine, setor, ano=None):
     FROM {DATABASE}.ecd_empresas_cadastro ec
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON ec.cnpj = ind.cnpj
-        AND ec.ano_referencia = ind.ano_referencia
+        AND CAST(ec.ano_referencia / 100 AS INT) = ind.ano_referencia
     LEFT JOIN {DATABASE}.ecd_score_risco_consolidado sr
         ON ec.cnpj = sr.cnpj
-        AND ec.ano_referencia = sr.ano_referencia
-    WHERE ec.cnae_divisao_descricao = '{setor}'
+        AND CAST(ec.ano_referencia / 100 AS INT) = sr.ano_referencia
+    WHERE COALESCE(ec.cnae_divisao_descricao, ec.de_cnae) = '{setor}'
         {ano_filter}
     ORDER BY ind.ativo_total DESC
     LIMIT 200
@@ -473,7 +473,7 @@ def carregar_empresas_alto_risco(_engine, limite=500):
     FROM {DATABASE}.ecd_score_risco_consolidado sr
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON sr.cnpj = ec.cnpj
-        AND sr.ano_referencia = ec.ano_referencia
+        AND sr.ano_referencia = CAST(ec.ano_referencia / 100 AS INT)
     INNER JOIN {DATABASE}.ecd_indicadores_financeiros ind
         ON sr.cnpj = ind.cnpj
         AND sr.ano_referencia = ind.ano_referencia
@@ -628,13 +628,14 @@ def carregar_inconsistencias_equacao(_engine, ano=None, limite=500):
     if _engine is None:
         return None
 
-    ano_filter = f"AND ie.ano_referencia = {ano}" if ano else ""
+    # ie.ano_referencia é YYYYMM, então filtramos pelo ano
+    ano_filter = f"AND CAST(ie.ano_referencia / 100 AS INT) = {ano}" if ano else ""
 
     query = f"""
     SELECT
         ie.cnpj,
         ec.nm_razao_social,
-        ec.cnae_divisao_descricao as setor,
+        COALESCE(ec.cnae_divisao_descricao, ec.de_cnae, 'Não Classificado') as setor,
         ec.cd_uf,
         ie.ano_referencia,
         ie.data_fim_periodo,
@@ -711,6 +712,8 @@ def carregar_benchmark_setorial(_engine, ano=None):
     SELECT
         cd_cnae,
         de_cnae,
+        cnae_secao,
+        cnae_secao_descricao,
         cnae_divisao,
         cnae_divisao_descricao,
         ano_referencia,
@@ -722,12 +725,10 @@ def carregar_benchmark_setorial(_engine, ano=None):
         media_endividamento_setor,
         media_margem_liquida_setor,
         media_roe_setor,
-        percentil_25_ativo,
-        percentil_50_ativo,
-        percentil_75_ativo,
-        percentil_25_receita,
-        percentil_50_receita,
-        percentil_75_receita
+        min_liquidez_setor,
+        max_liquidez_setor,
+        min_margem_liquida_setor,
+        max_margem_liquida_setor
     FROM {DATABASE}.ecd_benchmark_setorial
     {ano_filter}
     ORDER BY qtd_empresas_setor DESC
@@ -782,7 +783,7 @@ def carregar_empresas_suspeitas_indicador(_engine, indicador, threshold_min=None
     FROM {DATABASE}.ecd_indicadores_financeiros ind
     INNER JOIN {DATABASE}.ecd_empresas_cadastro ec
         ON ind.cnpj = ec.cnpj
-        AND ind.ano_referencia = ec.ano_referencia
+        AND ind.ano_referencia = CAST(ec.ano_referencia / 100 AS INT)
     LEFT JOIN {DATABASE}.ecd_score_risco_consolidado sr
         ON ind.cnpj = sr.cnpj
         AND ind.ano_referencia = sr.ano_referencia
